@@ -1,0 +1,27 @@
+# Unity generated folders
+Library/
+Temp/
+Logs/
+MemoryCaptures/
+Recordings/
+UserSettings/
+
+# Build outputs
+Builds/
+Build/
+
+# IDE specific files
+.vs/
+.vscode/
+.idea/
+*.user
+*.userprefs
+*.suo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
