@@ -10,7 +10,7 @@ public class Projectile : MonoBehaviour
     private int damage = 1;
     
     // Constants for projectile properties
-    public float playerProjectileSpeed = 20f;
+    public float playerProjectileSpeed = 60f; // Increased from 20f for easier enemy shooting
     public float enemyProjectileSpeed = 15f;
     
     // References to components
