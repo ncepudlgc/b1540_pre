@@ -132,13 +132,15 @@ public class PlayerController : MonoBehaviour
             Debug.LogWarning("Reticle not assigned to PlayerController!");
         }
         reticleTargetPosition = transform.position + transform.forward * reticleDistance;
+        reticleLocalOffset = Vector2.zero; // Initialize reticle offset to center
         if (reticle != null)
         {
             if (!GameObject.Find("Reticle"))
             {
-                reticle = Instantiate(reticle, reticleTargetPosition, Quaternion.identity);
+                reticle = Instantiate(reticle, reticleTargetPosition, transform.rotation);
             }
             reticle.transform.position = reticleTargetPosition;
+            reticle.transform.rotation = transform.rotation;
         }
         
         // Initialize current speed and energy
@@ -170,14 +172,21 @@ public class PlayerController : MonoBehaviour
     }
 
     /// <summary>
+    /// Speed transition smoothing factor (higher = faster transition).
+    /// </summary>
+    public float speedTransitionSmoothness = 5f;
+    
+    /// <summary>
     /// Handles speed control based on input (boost and slow down).
     /// </summary>
     void HandleSpeedControl()
     {
+        float targetSpeed = forwardSpeed;
+        
         // Boost when Shift is pressed and we have enough energy
         if ((Input.GetKey(KeyCode.LeftShift) || Input.GetButton("Fire3")) && currentEnergy >= minEnergy)
         {
-            currentSpeed = boostSpeed;
+            targetSpeed = boostSpeed;
             currentEnergy -= boostCost * Time.deltaTime;
             isBoosting = true;
             isSlowing = false;
@@ -185,7 +194,7 @@ public class PlayerController : MonoBehaviour
         // Slow down when Ctrl is pressed and we have enough energy
         else if ((Input.GetKey(KeyCode.LeftControl) || Input.GetButton("Fire2")) && currentEnergy >= minEnergy)
         {
-            currentSpeed = slowSpeed;
+            targetSpeed = slowSpeed;
             currentEnergy -= brakeCost * Time.deltaTime;
             isBoosting = false;
             isSlowing = true;
@@ -193,10 +202,13 @@ public class PlayerController : MonoBehaviour
         // Return to normal speed when neither is pressed or out of energy
         else
         {
-            currentSpeed = forwardSpeed;
+            targetSpeed = forwardSpeed;
             isBoosting = false;
             isSlowing = false;
         }
+        
+        // Smoothly transition to target speed
+        currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, speedTransitionSmoothness * Time.deltaTime);
     }
     
     /// <summary>
@@ -227,6 +239,11 @@ public class PlayerController : MonoBehaviour
     }
 
     /// <summary>
+    /// Stores the reticle offset from center (in local space) to prevent drift.
+    /// </summary>
+    private Vector2 reticleLocalOffset = Vector2.zero;
+    
+    /// <summary>
     /// Moves the reticle target position based on input.
     /// </summary>
     void HandleReticleMovement()
@@ -235,16 +252,18 @@ public class PlayerController : MonoBehaviour
         float verticalInput = Input.GetAxis("Vertical");
         if (invertYAxis)
             verticalInput = -verticalInput;
-        // Move the reticle in a plane in front of the player
-        Vector3 inputDelta = new Vector3(horizontalInput, verticalInput, 0) * moveSpeed * Time.deltaTime;
-        reticleTargetPosition += transform.right * inputDelta.x + transform.up * inputDelta.y;
-        // Clamp reticle within bounds relative to the center plane
+        
+        // Update reticle offset in local space (relative to ship's orientation)
+        Vector2 inputDelta = new Vector2(horizontalInput, verticalInput) * moveSpeed * Time.deltaTime;
+        reticleLocalOffset += inputDelta;
+        
+        // Clamp reticle offset within bounds (in local space, independent of ship position)
+        reticleLocalOffset.x = Mathf.Clamp(reticleLocalOffset.x, -reticleBounds.x, reticleBounds.x);
+        reticleLocalOffset.y = Mathf.Clamp(reticleLocalOffset.y, -reticleBounds.y, reticleBounds.y);
+        
+        // Calculate reticle position in world space based on ship's current position and rotation
         Vector3 center = transform.position + transform.forward * reticleDistance;
-        Vector3 offset = reticleTargetPosition - center;
-        offset.x = Mathf.Clamp(offset.x, -reticleBounds.x, reticleBounds.x);
-        offset.y = Mathf.Clamp(offset.y, -reticleBounds.y, reticleBounds.y);
-        offset.z = 0;
-        reticleTargetPosition = center + offset;
+        reticleTargetPosition = center + transform.right * reticleLocalOffset.x + transform.up * reticleLocalOffset.y;
     }
 
     /// <summary>
@@ -305,7 +324,8 @@ public class PlayerController : MonoBehaviour
         if (reticle != null)
         {
             reticle.transform.position = reticleTargetPosition;
-            reticle.transform.rotation = Quaternion.identity;
+            // Keep reticle rotation consistent with ship rotation
+            reticle.transform.rotation = transform.rotation;
         }
     }
 
