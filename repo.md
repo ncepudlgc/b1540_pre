@@ -32,4 +32,4 @@ a few issues. Player projectiles should be much faster so that I can shoot enemi
 
 ## PR链接
 
-待创建
+https://github.com/ncepudlgc/b1540_pre/pull/1
